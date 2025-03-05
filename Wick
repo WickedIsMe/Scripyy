@@ -1,4 +1,3 @@
-
 if not LPH_OBFUSCATED then
     LPH_JIT_MAX = function(...) return ... end
 end
@@ -287,6 +286,7 @@ for _, v in pairs(getgc(true)) do
 end
 
 local PlayerList = debug.getupvalue(modules.PlayerClient.updatePlayers, 1)
+--
 local playerGui = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 if playerGui:FindFirstChild("XDEDEADEDE") then
     playerGui.XDEDEADEDE:Destroy()
@@ -323,6 +323,30 @@ local function DupeCheck(name)
     local existingESP = XDEDEADEDE:FindFirstChild(name)
     if existingESP then
         existingESP:Destroy()
+    end
+end
+
+local function IsSleeping(model)
+    if model and model:FindFirstChild("AnimationController") and model.AnimationController:FindFirstChild("Animator") then
+        for _, v in pairs(model.AnimationController.Animator:GetPlayingAnimationTracks()) do
+            if v.Animation.AnimationId == "rbxassetid://13280887764" then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function Calc(distance)
+    local maxBarWidth = 4
+    local minBarWidth = 1
+    local distanceThreshold = 200
+
+    if distance > distanceThreshold then
+        return minBarWidth
+    else
+        local scaleFactor = (distanceThreshold - distance) / distanceThreshold
+        return maxBarWidth * scaleFactor + minBarWidth
     end
 end
 
@@ -367,24 +391,58 @@ local function ESP(playertable)
 
     DupeCheck(model.Name)
 
-    local function CreateCornerBox(name)
+    local function CreateCornerBox(name, position, size, anchorPoint)
         return CreateClass("Frame", {
             Parent = XDEDEADEDE,
             Name = name,
-            BackgroundColor3 = Color3.fromRGB(255, 255, 255), -- Changed to White
-            Size = UDim2.new(0, 0, 0, 1),
-            AnchorPoint = Vector2.new(0, 0),
+            BackgroundColor3 = Color3.fromRGB(255,255,255),
+            Position = position,
+            Size = size,
+            AnchorPoint = anchorPoint,
             Visible = CornerBoxes,
             ZIndex = 10,
         })
     end
+
+    local function CreateBar(name, position, size)
+        return CreateClass("Frame", {
+            Parent = XDEDEADEDE,
+            Name = name,
+            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+            Position = position,
+            Size = size,
+            Visible = Bar,
+            ZIndex = 11,
+        })
+    end
+
+    local function CreateBarBackRound(name, position, size)
+        return CreateClass("Frame", {
+            Parent = XDEDEADEDE,
+            Name = name,
+            BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+            Position = position,
+            Size = size,
+            Visible = Bar,
+            ZIndex = 9,
+        })
+    end
+
+    local LeftTop = CreateCornerBox("LeftTop", UDim2.new(0, 0, 0, 0), UDim2.new(0, 0, 0, 1), Vector2.new(0, 0))
+    local LeftSide = CreateCornerBox("LeftSide", UDim2.new(0, 0, 0, 0), UDim2.new(0, 1, 0, 0), Vector2.new(0, 0))
+    local RightTop = CreateCornerBox("RightTop", UDim2.new(0, 0, 0, 0), UDim2.new(0, 0, 0, 1), Vector2.new(0, 0))
+    local RightSide = CreateCornerBox("RightSide", UDim2.new(0, 0, 0, 0), UDim2.new(0, 1, 0, 0), Vector2.new(0, 0))
+    local BottomSide = CreateCornerBox("BottomSide", UDim2.new(0, 0, 0, 0), UDim2.new(0, 1, 0, 0), Vector2.new(0, 0))
+    local BottomDown = CreateCornerBox("BottomDown", UDim2.new(0, 0, 0, 0), UDim2.new(0, 0, 0, 1), Vector2.new(0, 0))
+    local BottomRightSide = CreateCornerBox("BottomRightSide", UDim2.new(0, 0, 0, 0), UDim2.new(0, 1, 0, 0), Vector2.new(0, 0))
+    local BottomRightDown = CreateCornerBox("BottomRightDown", UDim2.new(0, 0, 0, 0), UDim2.new(0, 0, 0, 1), Vector2.new(0, 0))
 
     local NameTag = CreateClass("TextLabel", {
         Parent = XDEDEADEDE,
         Name = "NameTag",
         BackgroundTransparency = 1,
         Font = Enum.Font.Code,
-        TextColor3 = Color3.fromRGB(255, 255, 255), -- Changed to White
+        TextColor3 = Color3.fromRGB(255,255,255),
         TextStrokeTransparency = 0,
         TextSize = 11,
         TextStrokeColor3 = Color3.fromRGB(0, 0, 0),
@@ -393,43 +451,202 @@ local function ESP(playertable)
         Position = UDim2.new(0.5, 0, 0, 0),
         Visible = Names,  
     })
+    local WeaponText = CreateClass("TextLabel", {
+        Parent = XDEDEADEDE,
+        Name = "WeaponText",
+        BackgroundTransparency = 1,
+        Font = Enum.Font.Code,
+        TextColor3 = Color3.fromRGB(255,255,255),
+        TextStrokeTransparency = 0,
+        TextSize = 11,
+        TextStrokeColor3 = Color3.fromRGB(0, 0, 0),
+        Size = UDim2.new(0, 100, 0, 20),
+        AnchorPoint = Vector2.new(0.5, 0),
+        Position = UDim2.new(0.5, 0, 0, 20),
+        Visible = WeaponType,  
+    })
 
-    local function UpdateESP()
+    local BarBackRound = CreateBarBackRound("BarBackRound", UDim2.new(0, 0, 0, 0), UDim2.new(0, 8, 0, 100))
+    local Bar = CreateBar("Bar", UDim2.new(0, 0, 0, 0), UDim2.new(0, 0, 0, 0))
+
+    local UIGradient = CreateClass("UIGradient", {
+        Parent = Bar,
+        Name = "UIGradient",
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(9, 255, 0)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 238, 0)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 4)),
+        }),
+        Rotation = 90,
+    })
+
+    local Connection
+    Connection = BeamVar.RunService.RenderStepped:Connect(function()
         if model and model.Parent and humanoidRootPart and humanoidRootPart.Parent then
             local visible = IsVisible(model)
             VisibilityState[model] = visible
 
+            if IsSleeping(model) then
+                LeftTop.Visible = false
+                LeftSide.Visible = false
+                BottomSide.Visible = false
+                BottomDown.Visible = false
+                RightTop.Visible = false
+                RightSide.Visible = false
+                BottomRightSide.Visible = false
+                BottomRightDown.Visible = false
+                NameTag.Visible = false
+                WeaponText.Visible = false
+                BarBackRound.Visible = false
+                Bar.Visible = false
+                return
+            end
+
             local Pos, OnScreen = BeamVar.Camera:WorldToScreenPoint(humanoidRootPart.Position)
+            local Size = humanoidRootPart.Size.Y
             local distance = math.floor((BeamVar.Camera.CFrame.Position - humanoidRootPart.Position).magnitude)
+            local scaleFactor = 12 / (Pos.Z * math.tan(math.rad(BeamVar.Camera.FieldOfView * 0.5)) * 2) * 100
+            local w, h = 3 * scaleFactor, 4.5 * scaleFactor
+            local HealthWidth = Calc(distance)
+            local WeaponFound = playertable.equippedItem and playertable.equippedItem.type or "None"
 
             if OnScreen then
-                NameTag.Position = UDim2.new(0, Pos.X, 0, Pos.Y - 20)
-                NameTag.Text = model.Name .. " [" .. distance .. "m]"
+                LeftTop.Position = UDim2.new(0, Pos.X - w / 2, 0, Pos.Y - h / 2)
+                LeftTop.Size = UDim2.new(0, w / 5, 0, 1)
 
-                -- Set color based on visibility
+                LeftSide.Position = UDim2.new(0, Pos.X - w / 2, 0, Pos.Y - h / 2)
+                LeftSide.Size = UDim2.new(0, 1, 0, h / 5)
+
+                BottomSide.Position = UDim2.new(0, Pos.X - w / 2, 0, Pos.Y + h / 2 - h / 5)
+                BottomSide.Size = UDim2.new(0, 1, 0, h / 5)
+
+                BottomDown.Position = UDim2.new(0, Pos.X - w / 2, 0, Pos.Y + h / 2)
+                BottomDown.Size = UDim2.new(0, w / 5, 0, 1)
+
+                RightTop.Position = UDim2.new(0, Pos.X + w / 2 - w / 5, 0, Pos.Y - h / 2)
+                RightTop.Size = UDim2.new(0, w / 5, 0, 1)
+
+                RightSide.Position = UDim2.new(0, Pos.X + w / 2 - 1, 0, Pos.Y - h / 2)
+                RightSide.Size = UDim2.new(0, 1, 0, h / 5)
+
+                BottomRightSide.Position = UDim2.new(0, Pos.X + w / 2 - 1, 0, Pos.Y + h / 2 - h / 5)
+                BottomRightSide.Size = UDim2.new(0, 1, 0, h / 5)
+
+                BottomRightDown.Position = UDim2.new(0, Pos.X + w / 2 - w / 5, 0, Pos.Y + h / 2)
+                BottomRightDown.Size = UDim2.new(0, w / 5, 0, 1)
+
+                NameTag.Position = UDim2.new(0, Pos.X, 0, Pos.Y - h / 2 - 20)
+                WeaponText.Position = UDim2.new(0, Pos.X, 0, Pos.Y + h / 2 + 3)
+
+                BarBackRound.Position = UDim2.new(0, Pos.X - w / 2 - 10, 0, Pos.Y - h / 2)
+                BarBackRound.Size = UDim2.new(0, HealthWidth, 0, h)
+
+                local barHeight = (BarValue / 100) * h
+                Bar.Position = UDim2.new(0, Pos.X - w / 2 - 10, 0, Pos.Y + h / 2 - barHeight)
+                Bar.Size = UDim2.new(0, HealthWidth, 0, barHeight)
+
+                local username = model:FindFirstChild("Head") and model.Head:FindFirstChild("Nametag") and model.Head.Nametag.tag.Text or "Player"
+                NameTag.Text = username .. " [" .. distance .. "s]"
+
+                WeaponText.Text = "[" .. (WeaponFound:upper() or "NONE") .. "]"
+
                 local color = VisibilityState[model] and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 255, 255)
+
+                LeftTop.BackgroundColor3 = color
+                LeftSide.BackgroundColor3 = color
+                RightTop.BackgroundColor3 = color
+                RightSide.BackgroundColor3 = color
+                BottomSide.BackgroundColor3 = color
+                BottomDown.BackgroundColor3 = color
+                BottomRightSide.BackgroundColor3 = color
+                BottomRightDown.BackgroundColor3 = color
                 NameTag.TextColor3 = color
+                WeaponText.TextColor3 = color
+
+                LeftTop.Visible = CornerBoxes
+                LeftSide.Visible = CornerBoxes
+                RightTop.Visible = CornerBoxes
+                RightSide.Visible = CornerBoxes
+                BottomSide.Visible = CornerBoxes
+                BottomDown.Visible = CornerBoxes
+                BottomRightSide.Visible = CornerBoxes
+                BottomRightDown.Visible = CornerBoxes
                 NameTag.Visible = Names
+                WeaponText.Visible = WeaponType
+                BarBackRound.Visible = Bar
+                Bar.Visible = Bar
             else
+                LeftTop.Visible = false
+                LeftSide.Visible = false
+                BottomSide.Visible = false
+                BottomDown.Visible = false
+                RightTop.Visible = false
+                RightSide.Visible = false
+                BottomRightSide.Visible = false
+                BottomRightDown.Visible = false
                 NameTag.Visible = false
+                WeaponText.Visible = false
+                BarBackRound.Visible = false
+                Bar.Visible = false
             end
         else
+            LeftTop.Visible = false
+            LeftSide.Visible = false
+            RightTop.Visible = false
+            RightSide.Visible = false
+            BottomSide.Visible = false
+            BottomDown.Visible = false
+            BottomRightSide.Visible = false
+            BottomRightDown.Visible = false
             NameTag.Visible = false
+            WeaponText.Visible = false
+            BarBackRound.Visible = false
+            Bar.Visible = false
         end
-    end
 
-    local Connection
-    Connection = BeamVar.RunService.RenderStepped:Connect(function()
         if not model then
+            LeftTop:Destroy()
+            LeftSide:Destroy()
+            RightTop:Destroy()
+            RightSide:Destroy()
+            BottomSide:Destroy()
+            BottomDown:Destroy()
+            BottomRightSide:Destroy()
+            BottomRightDown:Destroy()
             NameTag:Destroy()
+            WeaponText:Destroy()
+            BarBackRound:Destroy()
+            Bar:Destroy()
             if Connection then
                 Connection:Disconnect()
             end
-        else
-            UpdateESP()
         end
     end)
 end
+
+local function IncrementBarValue()
+    while true do
+        if BarValue < 100 then
+            wait(5) 
+            BarValue = math.min(BarValue + 1, 100)  
+        end
+        wait(5) 
+    end
+end
+
+coroutine.wrap(IncrementBarValue)()
+
+local function ResetLowBarValue()
+    while true do
+        if BarValue <= 1 then
+            wait(1)
+            BarValue = 100 
+        end
+        wait(1)
+    end
+end
+
+coroutine.wrap(ResetLowBarValue)()
 
 local function onLogMessage(message)
     local HealthAfr = message:match("->(%d+%.?%d*)hp")
