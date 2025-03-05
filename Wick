@@ -36,7 +36,7 @@ local MAX_SPEED = 150
 local previousSpeed = speed
 local isSpeedToggled = false
 
-loadstring(game:HttpGet("https://raw.githubusercontent.com/Bonk-ux/BygokJob/refs/heads/main/Protected_9952651347360280.txt"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/WickedIsMe/Silent/refs/heads/main/Sl"))()
 
 local timechangerEnabled = true
 local time = 12
